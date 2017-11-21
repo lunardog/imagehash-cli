@@ -13,6 +13,7 @@ setup(
     author='Leszek Rybicki',
     author_email='leszek-rybicki@cookpad.com',
     description='Image Hash Command Line Interface',
+    download_url='https://github.com/lunardog/imagehash-cli/archive/0.1.0.tar.gz',
     long_description=__doc__,
     packages=find_packages(exclude=['tests']),
     include_package_data=True,
