@@ -1,5 +1,7 @@
 # ImageHash CLI
 
+![travis](https://travis-ci.org/lunardog/imagehash-cli.svg?branch=master)
+
 Image Hash Command Line Interface
 
 A command line wrapper of the `imagehash` python library.
