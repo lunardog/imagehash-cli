@@ -6,7 +6,7 @@ A command line wrapper of the `imagehash` python library.
 
 # Installation
 
-    $ pip install git+https://github.com/lunardog/imagehash-cli.git
+    $ pip install imagehash-cli
 
 # Usage
 
