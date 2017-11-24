@@ -65,11 +65,11 @@ def main(hash, rename, dry_run, template, image):
     if rename:
         new_name = get_new_name(orig_path, hash_string, template)
         click.echo('%s -> %s' % (orig_path, new_name), err=True)
-        try:
-            if not dry_run:
+        if not dry_run:
+            try:
                 os.rename(orig_path, new_name)
-        except OSError:
-            raise click.FileError(orig_path)
+            except OSError:
+                raise click.FileError(new_name)
     else:
         click.echo(hash_string, nl=False)
 
