@@ -37,6 +37,7 @@ def get_hash(img, hash_type='average'):
 
 
 def process_file(orig_path, hash, rename, template, dry_run):
+    """ Process a single file """
     try:
         img = Image.open(orig_path)
     except IOError:
