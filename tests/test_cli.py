@@ -1,4 +1,5 @@
 import pytest
+import click
 from click.testing import CliRunner
 from imagehash_cli import cli
 from PIL import Image
@@ -27,7 +28,11 @@ def test_get_hash(image):
         hash = cli.get_hash(image, 'average')
         assert type(hash) == str
         assert hash == str(hash_function(image))
-    pass
+    try:
+        hash = cli.get_hash(image, 'FOOBAR')
+        assert False, 'Unknown hash type should raise an exception'
+    except click.UsageError:
+        pass
 
 
 def test_get_new_name():
@@ -71,13 +76,24 @@ def test_cli_file(runner, image):
         result = runner.invoke(cli.main, [filename])
         assert result.exit_code == 0
         assert result.output == imghash
-
-
-def test_cli_missing_file(runner, image):
-    filename = '/tmp/test.jpg'
-    if os.path.exists(filename):
         os.remove(filename)
+
+
+def test_cli_not_image_file(runner):
+    filename = '/tmp/test.jpg'
+    # try again with an empty file
     with runner.isolated_filesystem():
+        open(filename, 'a').close()
+        result = runner.invoke(cli.main, [filename])
+        assert result.exception
+        os.remove(filename)
+
+
+def test_cli_missing_file(runner):
+    filename = '/tmp/test.jpg'
+    with runner.isolated_filesystem():
+        if os.path.exists(filename):
+            os.remove(filename)
         result = runner.invoke(cli.main, [filename])
         assert result.exception
 
@@ -128,6 +144,23 @@ def test_cli_file_rename_template(runner, image):
         assert os.path.exists(new_name)
         # clean up the new file
         os.remove(new_name)
+
+
+def test_cli_file_rename_bad_filename(runner, image):
+    filename = '/tmp/test.jpg'
+    imghash = cli.get_hash(image, 'average')
+    template = '/tmp/test.jpg/not_a_directory'
+    new_name = cli.get_new_name(filename, imghash, template)
+    with runner.isolated_filesystem():
+        if os.path.exists(new_name):
+            os.remove(new_name)
+        image.save(filename, format='JPEG')
+        result = runner.invoke(
+            cli.main,
+            [filename, '--rename', '--template', template]
+        )
+        assert result.exception
+        assert not os.path.exists(new_name)
 
 
 def test_cli_file_rename_dry_run(runner, image):
