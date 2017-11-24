@@ -3,6 +3,7 @@ import click
 from click.testing import CliRunner
 from imagehash_cli import cli
 from PIL import Image
+import random
 import os
 
 
@@ -13,7 +14,14 @@ def runner():
 
 @pytest.fixture
 def image():
-    img = Image.new('RGB', (255, 255))
+    # TODO: not good to introduce random numbers in test
+    # but it saves us from all black images
+    color = (
+        random.randint(0, 255),
+        random.randint(0, 255),
+        random.randint(0, 255)
+    )
+    img = Image.new('RGB', (255, 255), color=color)
     return img
 
 
@@ -25,7 +33,7 @@ def test_get_hash(image):
     hash_functions = cli.HASH_FUNCTIONS
     for key in hash_functions:
         hash_function = hash_functions[key]
-        hash = cli.get_hash(image, 'average')
+        hash = cli.get_hash(image, key)
         assert type(hash) == str
         assert hash == str(hash_function(image))
     try:
@@ -64,7 +72,14 @@ def test_rename_with_template():
 
 
 def test_cli(runner):
+    # Executed, but no stream
     result = runner.invoke(cli.main)
+    assert result.exception
+
+
+def test_cli_no_image(runner):
+    # Executed, but no stream
+    result = runner.invoke(cli.main, [])
     assert result.exception
 
 
@@ -84,6 +99,8 @@ def test_cli_not_image_file(runner):
     # try again with an empty file
     with runner.isolated_filesystem():
         open(filename, 'a').close()
+    with runner.isolated_filesystem():
+        open(filename, 'a').close()
         result = runner.invoke(cli.main, [filename])
         assert result.exception
         os.remove(filename)
@@ -98,18 +115,47 @@ def test_cli_missing_file(runner):
         assert result.exception
 
 
-def test_cli_file_hash(runner, image):
-    filename = '/tmp/test.jpg'
-    hash_functions = cli.HASH_FUNCTIONS
-    if os.path.exists(filename):
-        os.remove(filename)
+def test_cli_multiple(runner, image):
+    num_images = 5
+    filenames = ['/tmp/test-%d.jpg' % (n) for n in range(num_images)]
+    imghash = cli.get_hash(image)
     with runner.isolated_filesystem():
-        image.save(filename, format='JPEG')
-        for h in hash_functions.keys():
-            imghash = cli.get_hash(image, h)
-            result = runner.invoke(cli.main, [filename, '--hash', h])
-            assert result.exit_code == 0
-            assert result.output == imghash
+        for path in filenames:
+            if os.path.exists(path):
+                os.remove(path)
+            image.save(path, format='JPEG')
+        result = runner.invoke(cli.main, filenames)
+        assert result.exit_code == 0
+        expected_output = os.linesep.join([
+            '%s %s' % (path, imghash) for path in filenames
+        ])
+        assert result.output == expected_output
+        # clean up
+        for path in filenames:
+            os.remove(path)
+
+
+def test_cli_multiple_rename(runner, image):
+    num_images = 5
+    filenames = ['/tmp/test-%d.jpg' % (n) for n in range(num_images)]
+    imghash = cli.get_hash(image)
+    with runner.isolated_filesystem():
+        for path in filenames:
+            if os.path.exists(path):
+                os.remove(path)
+            image.save(path, format='JPEG')
+        result = runner.invoke(cli.main, filenames+['--rename'])
+        assert result.exit_code == 0
+        for path in filenames:
+            new_name = cli.get_new_name(path, imghash)
+            assert os.path.exists(new_name)
+            assert not os.path.exists(path)
+        # clean up
+        for path in filenames:
+            new_name = cli.get_new_name(path, imghash)
+            # hashes might be the same
+            if os.path.exists(new_name):
+                os.remove(new_name)
 
 
 def test_cli_file_rename(runner, image):

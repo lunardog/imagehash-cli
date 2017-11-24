@@ -27,7 +27,7 @@ def get_new_name(orig_path, hash, template=None):
     return new_name
 
 
-def get_hash(img, hash_type):
+def get_hash(img, hash_type='average'):
     """ Returns hash of the PIL image """
     if hash_type in HASH_FUNCTIONS:
         hash = str(HASH_FUNCTIONS[hash_type](img))
@@ -36,26 +36,8 @@ def get_hash(img, hash_type):
     return str(hash)
 
 
-@click.command()
-@click.option(
-    '--hash',
-    type=click.Choice(HASH_FUNCTIONS.keys()),
-    default='average'
-)
-@click.option('--rename', is_flag=True)
-@click.option('--dry-run', is_flag=True)
-@click.option(
-    '--template',
-    default=None,
-    help='Template for rename (e.g. {path}/{hash}{ext})'
-)
-@click.argument('image',
-                type=click.Path(exists=True),
-                required=True)
-def main(hash, rename, dry_run, template, image):
-    """Command Line Image Hash"""
-    orig_path = image
-
+def process_file(orig_path, hash, rename, template, dry_run):
+    """ Process a single file """
     try:
         img = Image.open(orig_path)
     except IOError:
@@ -70,7 +52,48 @@ def main(hash, rename, dry_run, template, image):
                 os.rename(orig_path, new_name)
             except OSError:
                 raise click.FileError(new_name)
-    else:
-        click.echo(hash_string, nl=False)
 
     return hash_string
+
+
+@click.command()
+@click.pass_context
+@click.option(
+    '--hash',
+    type=click.Choice(HASH_FUNCTIONS.keys()),
+    default='average'
+)
+@click.option('--rename', is_flag=True)
+@click.option('--dry-run', is_flag=True)
+@click.option(
+    '--template',
+    default=None,
+    help='Template for rename (e.g. {path}/{hash}{ext})'
+)
+@click.argument(
+    'image',
+    type=click.Path(exists=True),
+    nargs=-1,
+    required=True
+)
+def main(ctx, hash, rename, dry_run, template, image):
+    """Command Line Image Hash"""
+
+    if len(image) == 1:
+        # if one image provided, read it
+        orig_path = image[0]
+        response = process_file(orig_path, hash, rename, template, dry_run)
+        if not rename:
+            click.echo(response, nl=False)
+        return
+
+    else:
+        # if multiple images provided, go one by one
+        responses = []
+        for path in image:
+            file_hash = process_file(path, hash, rename, template, dry_run)
+            responses.append('%s %s' % (path, file_hash))
+        response = os.linesep.join(responses)
+        if not rename:
+            click.echo(response, nl=False)
+        return response
