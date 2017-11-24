@@ -99,6 +99,8 @@ def test_cli_not_image_file(runner):
     # try again with an empty file
     with runner.isolated_filesystem():
         open(filename, 'a').close()
+    with runner.isolated_filesystem():
+        open(filename, 'a').close()
         result = runner.invoke(cli.main, [filename])
         assert result.exception
         os.remove(filename)
