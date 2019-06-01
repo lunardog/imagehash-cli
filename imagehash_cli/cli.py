@@ -78,11 +78,8 @@ def process_file(orig_path, hash, rename, template, dry_run):
 )
 def main(ctx, hash, rename, dry_run, template, image):
     """Command Line Image Hash"""
-    responses = []
     for path in image:
         file_hash = process_file(path, hash, rename, template, dry_run)
-        responses.append('%s %s' % (path, file_hash))
-    response = os.linesep.join(responses)
-    if not rename:
-        click.echo(response)
-    return response
+        if not rename:
+            out = '%s %s' % (path, file_hash)
+            click.echo(out)
