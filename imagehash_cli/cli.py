@@ -81,5 +81,5 @@ def main(ctx, hash, rename, dry_run, template, image):
     for path in image:
         file_hash = process_file(path, hash, rename, template, dry_run)
         if not rename:
-            out = '%s\t%s' % (path, file_hash)
+            out = '%s\t%s' % (file_hash, path)
             click.echo(out)
