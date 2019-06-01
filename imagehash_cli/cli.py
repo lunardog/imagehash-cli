@@ -84,7 +84,7 @@ def main(ctx, hash, rename, dry_run, template, image):
         orig_path = image[0]
         response = process_file(orig_path, hash, rename, template, dry_run)
         if not rename:
-            click.echo(response, nl=False)
+            click.echo(response)
         return
 
     else:
@@ -95,5 +95,5 @@ def main(ctx, hash, rename, dry_run, template, image):
             responses.append('%s %s' % (path, file_hash))
         response = os.linesep.join(responses)
         if not rename:
-            click.echo(response, nl=False)
+            click.echo(response)
         return response
