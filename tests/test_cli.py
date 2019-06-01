@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pytest
 import click
 from click.testing import CliRunner
@@ -5,6 +6,25 @@ from imagehash_cli import cli
 from PIL import Image
 import random
 import os
+
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+
+
+def _simprint(s):
+    """ Do to a string the same processing that print would do.
+
+    Needed to compare expected outputs from the cli when they contain newlines
+    or tabs. This is surprisingly difficult to do in a way that works on all
+    Pythons. On 2, requires the print function from __future__.
+    """
+    buf = StringIO()
+    print(s, file=buf)
+    buf.flush()
+    return buf.getvalue()
 
 
 @pytest.fixture
@@ -90,7 +110,8 @@ def test_cli_file(runner, image):
         image.save(filename, format='JPEG')
         result = runner.invoke(cli.main, [filename])
         assert result.exit_code == 0
-        assert result.output == imghash
+        expected_output = _simprint("%s\t%s" % (imghash, filename))
+        assert result.output == expected_output
         os.remove(filename)
 
 
@@ -126,9 +147,8 @@ def test_cli_multiple(runner, image):
             image.save(path, format='JPEG')
         result = runner.invoke(cli.main, filenames)
         assert result.exit_code == 0
-        expected_output = os.linesep.join([
-            '%s %s' % (path, imghash) for path in filenames
-        ])
+        expected_lines = ['%s\t%s' % (imghash, path) for path in filenames]
+        expected_output = _simprint(os.linesep.join(expected_lines))
         assert result.output == expected_output
         # clean up
         for path in filenames:
